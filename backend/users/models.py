@@ -55,6 +55,8 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser, PermissionsMixin):
+    """Modelo de usuário do sistema."""
+
     DEPARTMENT_MANAGER = 1
     COMPANY_MANAGER = 2
     EMPLOYEE = 3
