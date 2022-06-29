@@ -7,7 +7,7 @@ RUN mkdir -p /code
 
 WORKDIR /code
 
-COPY /companies /code/
+COPY /backend /code/
 
 COPY /requirements.txt /code/
 
