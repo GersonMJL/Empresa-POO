@@ -1,7 +1,9 @@
-import validate_cpf
-import uuid
+from validate_docbr import CPF
 from django.db import models
-from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+
+
+cpf = CPF()
 
 
 class UserManager(BaseUserManager):
@@ -27,11 +29,11 @@ class UserManager(BaseUserManager):
             email=self.normalize_email(email), name=name, cpf=cpf, **extra_fields
         )
         user.set_password(password)
-        user.save()
+        user.save(using=self._db)
 
         return user
 
-    def create_superuser(self, email, name, password, **extra_fields):
+    def create_superuser(self, email, name, cpf, password=None, **extra_fields):
         """Cria um superusuário com email, nome e senha.
 
         Args:
@@ -43,41 +45,28 @@ class UserManager(BaseUserManager):
             Usuario: Objeto de usuário criado.
         """
 
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
+        usuario = self.create_user(
+            email=email, name=name, cpf=cpf, password=password, **extra_fields
+        )
+        usuario.is_active = True
+        usuario.is_admin = True
+        usuario.is_superuser = True
+        usuario.save(self._db)
+        return usuario
 
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError(("Superuser must have is_staff=True"))
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError(("Superuser must have is_superuser=True"))
 
-        return self.create_user(email, name, password, **extra_fields)
-
-
-class User(AbstractUser, PermissionsMixin):
+class User(AbstractUser):
     """Modelo de usuário do sistema."""
 
-    DEPARTMENT_MANAGER = 1
-    COMPANY_MANAGER = 2
-    EMPLOYEE = 3
-
-    ROLE_CHOICES = (
-        (DEPARTMENT_MANAGER, "Gerente de Departamento"),
-        (COMPANY_MANAGER, "Gerente de Empresa"),
-        (EMPLOYEE, "Funcionário"),
-    )
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(verbose_name="Email", max_length=100, unique=True)
+    username = None
+    first_name = models.CharField(max_length=255, blank=False, null=False)
+    last_name = models.CharField(max_length=255, blank=False, null=False)
+    email = models.EmailField(verbose_name="Email", max_length=100)
     cpf = models.CharField(
         verbose_name="CPF",
         unique=True,
         max_length=11,
-        blank=True,
-        null=True,
-    )
-    role = models.PositiveSmallIntegerField(
-        choices=ROLE_CHOICES, blank=True, null=True, verbose_name="Cargo"
+        primary_key=True,
     )
     name = models.CharField(verbose_name="Nome", max_length=100)
     is_active = models.BooleanField(verbose_name="Ativo", default=True)
@@ -85,14 +74,14 @@ class User(AbstractUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
+    USERNAME_FIELD = "cpf"
+    REQUIRED_FIELDS = ["name", "email"]
 
     def __str__(self):
         return self.name
 
     def validate_cpf(self):
-        return validate_cpf.validate_cpf(self.cpf)
+        return cpf.validate(self.cpf)
 
     def save(self, *args, **kwargs):
         if self.cpf:
