@@ -55,9 +55,20 @@ class UserManager(BaseUserManager):
         return usuario
 
 
+class Profile(models.Model):
+
+    id_count = models.AutoField(primary_key=True)
+
+    class Meta:
+        verbose_name = "Perfil"
+        verbose_name_plural = "Perfis"
+
+
 class User(AbstractUser):
     """Modelo de usuário do sistema."""
 
+    profile = models.OneToOneField(
+        Profile, on_delete=models.SET_NULL, null=True)
     username = None
     first_name = models.CharField(max_length=255, blank=False, null=False)
     last_name = models.CharField(max_length=255, blank=False, null=False)
@@ -87,4 +98,6 @@ class User(AbstractUser):
         if self.cpf:
             if not self.validate_cpf():
                 raise ValueError("CPF inválido")
+
+        self.profile = Profile.objects.create()
         super(User, self).save(*args, **kwargs)
