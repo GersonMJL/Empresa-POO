@@ -1,13 +1,13 @@
 from validate_docbr import CPF
 from django.db import models
-from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 
 cpf = CPF()
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, name, password=None, **extra_fields):
+    def create_user(self, email, name, cpf, password=None, **extra_fields):
         """Cria um usuário com email, nome e senha.
         Args:
             email (str): Email do usuário.
@@ -25,13 +25,15 @@ class UserManager(BaseUserManager):
         if not name:
             raise ValueError("Usuários precisam de um nome.")
 
-        user = self.model(email=self.normalize_email(email), name=name, **extra_fields)
+        user = self.model(
+            email=self.normalize_email(email), name=name, cpf=cpf, **extra_fields
+        )
         user.set_password(password)
         user.save(using=self._db)
 
         return user
 
-    def create_superuser(self, email, name, password, **extra_fields):
+    def create_superuser(self, email, name, cpf, password=None, **extra_fields):
         """Cria um superusuário com email, nome e senha.
 
         Args:
@@ -44,7 +46,7 @@ class UserManager(BaseUserManager):
         """
 
         usuario = self.create_user(
-            email=email, name=name, password=password, **extra_fields
+            email=email, name=name, cpf=cpf, password=password, **extra_fields
         )
         usuario.is_active = True
         usuario.is_admin = True
@@ -53,31 +55,18 @@ class UserManager(BaseUserManager):
         return usuario
 
 
-class User(AbstractUser, PermissionsMixin):
+class User(AbstractUser):
     """Modelo de usuário do sistema."""
 
-    DEPARTMENT_MANAGER = 1
-    COMPANY_MANAGER = 2
-    EMPLOYEE = 3
-
-    ROLE_CHOICES = (
-        (DEPARTMENT_MANAGER, "Gerente de Departamento"),
-        (COMPANY_MANAGER, "Gerente de Empresa"),
-        (EMPLOYEE, "Funcionário"),
-    )
-
+    username = None
     first_name = models.CharField(max_length=255, blank=False, null=False)
     last_name = models.CharField(max_length=255, blank=False, null=False)
-    email = models.EmailField(verbose_name="Email", max_length=100, unique=True)
+    email = models.EmailField(verbose_name="Email", max_length=100)
     cpf = models.CharField(
         verbose_name="CPF",
         unique=True,
         max_length=11,
-        blank=True,
-        null=True,
-    )
-    role = models.PositiveSmallIntegerField(
-        choices=ROLE_CHOICES, blank=True, null=True, verbose_name="Cargo"
+        primary_key=True,
     )
     name = models.CharField(verbose_name="Nome", max_length=100)
     is_active = models.BooleanField(verbose_name="Ativo", default=True)
@@ -85,8 +74,8 @@ class User(AbstractUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["name"]
+    USERNAME_FIELD = "cpf"
+    REQUIRED_FIELDS = ["name", "email"]
 
     def __str__(self):
         return self.name
@@ -99,18 +88,3 @@ class User(AbstractUser, PermissionsMixin):
             if not self.validate_cpf():
                 raise ValueError("CPF inválido")
         super(User, self).save(*args, **kwargs)
-
-
-# class EmployeeDepartment(User):
-#     """Modelo de funcionário do sistema."""
-
-#     department = models.ForeignKey(
-#         "users.Department", on_delete=models.CASCADE, verbose_name="Departamento"
-#     )
-
-#     def __str__(self):
-#         return self.name
-
-#     class Meta:
-#         verbose_name = "Funcionário"
-#         verbose_name_plural = "Funcionários"
