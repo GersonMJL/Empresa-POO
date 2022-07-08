@@ -25,7 +25,6 @@ class ManageableEntity(models.Model):
         verbose_name="CNPJ",
         max_length=14,
         unique=True,
-        blank=True,
         null=True,
     )
     manager = models.ForeignKey(
@@ -45,13 +44,20 @@ class ManageableEntity(models.Model):
         return self.name
 
     def cnpj_validator(self):
+        if not self.cnpj:
+            raise ValidationError("CNPJ é obrigatório.")
         if not cnpj.validate(self.cnpj):
             raise ValidationError("CNPJ inválido.")
+        return True
 
     def associate_manager(self, manager: User):
         if type(manager) is not User:
             raise TypeError("Manager must be a User.")
         self.manager = manager
+        self.save()
+
+    def remove_manager(self):
+        self.manager = None
         self.save()
 
     def set_address(self, address: str):
@@ -61,10 +67,13 @@ class ManageableEntity(models.Model):
     def set_phone(self, phone: str):
         if validate_phone(phone):
             self.phone = phone
-            self.save()
+            return True
+        raise ValidationError("Telefone inválido.")
 
     def save(self, *args, **kwargs):
         self.cnpj_validator()
+        if self.phone:
+            self.set_phone(self.phone)
         super().save(*args, **kwargs)
 
 

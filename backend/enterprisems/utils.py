@@ -25,5 +25,5 @@ def validate_phone(phone: str):
     if type(phone) is not str:
         raise TypeError("Phone must be a string.")
     if not re.match(r"(\(?\d{2}\)?\s)?(\d{4,5}\-\d{4})", phone):
-        raise Exception("Phone is not valid.")
+        raise Exception(f"Phone {phone} is not valid.")
     return True

@@ -1,5 +1,6 @@
 from validate_docbr import CPF
 from django.db import models
+from django.core.validators import validate_email
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
 
@@ -54,6 +55,9 @@ class UserManager(BaseUserManager):
         usuario.save(self._db)
         return usuario
 
+    def count(self) -> int:
+        return super().count()
+
 
 class User(AbstractUser):
     """Modelo de usuário do sistema."""
@@ -87,4 +91,6 @@ class User(AbstractUser):
         if self.cpf:
             if not self.validate_cpf():
                 raise ValueError("CPF inválido")
+        if self.email:
+            validate_email(self.email)
         super(User, self).save(*args, **kwargs)
